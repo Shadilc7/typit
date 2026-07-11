@@ -1,0 +1,114 @@
+/* ============================================
+   StatsPanel — Live typing metrics
+   ============================================ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  animation: fadeIn 0.3s ease-out 0.1s both;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+}
+
+@media (max-width: 640px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.statCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-3);
+  background: var(--gradient-card);
+  backdrop-filter: blur(12px);
+  border: var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.statCard:hover {
+  border-color: rgba(99, 102, 241, 0.25);
+}
+
+.statLabel {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.statValue {
+  font-family: var(--font-code);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
+/* WPM card — accent glow */
+.wpmCard {
+  border-color: rgba(99, 102, 241, 0.25);
+}
+
+.wpmCard .statValue {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Accuracy card */
+.accuracyCard .statValue {
+  color: var(--color-correct);
+}
+
+/* Error card — pulse when errors exist */
+.errorCard {
+  border-color: rgba(248, 113, 113, 0.25);
+}
+
+.errorCard .statValue {
+  color: var(--color-error);
+}
+
+/* --- Progress bar --- */
+
+.progressContainer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.progressTrack {
+  flex: 1;
+  height: 6px;
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--gradient-primary);
+  border-radius: var(--radius-full);
+  transition: width 0.15s ease-out;
+  box-shadow: 0 0 8px var(--color-accent-primary-glow);
+}
+
+.progressLabel {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+  white-space: nowrap;
+  min-width: 10ch;
+  text-align: right;
+}

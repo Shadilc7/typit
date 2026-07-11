@@ -1,0 +1,151 @@
+/* ============================================
+   CodeDisplay — Terminal-style code viewer
+   ============================================ */
+
+.container {
+  background: var(--color-bg-secondary);
+  border: var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  animation: fadeInScale 0.4s ease-out;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: rgba(0, 0, 0, 0.25);
+  border-bottom: var(--border-subtle);
+}
+
+.dots {
+  display: flex;
+  gap: 6px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  opacity: 0.9;
+}
+
+.filename {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+
+.codeArea {
+  padding: var(--space-6);
+  overflow-x: auto;
+  font-family: var(--font-code);
+  font-size: 1.05rem;
+  line-height: 1.75;
+  letter-spacing: 0.02em;
+  tab-size: 2;
+  counter-reset: line;
+}
+
+.codeArea code {
+  display: block;
+}
+
+.line {
+  display: flex;
+  min-height: 1.75em;
+}
+
+.lineNumber {
+  display: inline-block;
+  color: var(--color-text-dimmed);
+  text-align: right;
+  padding-right: var(--space-4);
+  user-select: none;
+  opacity: 0.5;
+  font-size: 0.85em;
+  line-height: 1.75;
+  flex-shrink: 0;
+}
+
+.lineContent {
+  flex: 1;
+  white-space: pre;
+}
+
+/* --- Character states --- */
+
+.char {
+  position: relative;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+  border-radius: 2px;
+  padding: 0 0.5px;
+}
+
+.untyped {
+  color: var(--color-text-dimmed);
+}
+
+.correct {
+  color: var(--color-correct);
+  text-shadow: 0 0 8px var(--color-correct-glow);
+}
+
+.incorrect {
+  color: var(--color-error);
+  background: var(--color-error-bg);
+  text-decoration: underline;
+  text-decoration-color: var(--color-error);
+  text-underline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Show expected character on hover for incorrect chars */
+.incorrect[data-expected]::after {
+  content: attr(data-expected);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  border: var(--border-subtle);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  white-space: nowrap;
+  z-index: var(--z-above);
+}
+
+.incorrect[data-expected]:hover::after {
+  opacity: 1;
+}
+
+/* Cursor — blinking highlight */
+.cursor {
+  background: var(--color-accent-primary-glow);
+  animation: cursorBlink 1s ease-in-out infinite;
+  border-radius: 2px;
+  box-shadow: 0 0 6px var(--color-accent-primary-glow);
+}
+
+.cursor.untyped {
+  color: var(--color-text-primary);
+}
+
+/* Newline chars */
+.newline {
+  opacity: 0.3;
+  font-size: 0.8em;
+}
+
+.newline.correct,
+.newline.incorrect {
+  opacity: 0.5;
+}

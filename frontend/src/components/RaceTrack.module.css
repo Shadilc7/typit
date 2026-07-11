@@ -1,0 +1,84 @@
+.raceTracksContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  padding: 1.5rem;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  border: var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 2rem;
+}
+
+.trackRow {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.playerInfo {
+  width: 140px;
+  min-width: 140px;
+  text-align: left;
+}
+
+.username {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.youBadge {
+  color: var(--color-accent-primary-light);
+  font-weight: 500;
+  font-size: var(--text-xs);
+}
+
+.trackArea {
+  flex: 1;
+  height: 36px;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+}
+
+.dashedLine {
+  width: 100%;
+  border-bottom: 3px dashed var(--color-text-dimmed);
+  opacity: 0.3;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+}
+
+.carWrapper {
+  position: absolute;
+  bottom: 3px; /* Sits exactly on the dashed line */
+  z-index: 2;
+  transition: left 0.1s linear;
+}
+
+.wpmInfo {
+  width: 80px;
+  min-width: 80px;
+  text-align: right;
+}
+
+.wpmValue {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.wpmUnit {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
