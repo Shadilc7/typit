@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../../services/api';
 import { getCableConsumer } from '../../services/cable';
 import type { Subscription } from '@rails/actioncable';
@@ -107,7 +107,7 @@ export function MultiplayerArea({ onExit }: { onExit: () => void }) {
     subscriptionRef.current = consumer.subscriptions.create(
       { channel: 'RaceChannel', room_code: roomCode },
       {
-        received(data) {
+        received(data: any) {
           console.log("WS Data:", data);
           if (data.action === 'player_joined') {
             setRaceState(prev => {

@@ -27,7 +27,7 @@ export function StatsPanel({
   isFinished,
 }: StatsPanelProps) {
   const timerRef = useRef<HTMLSpanElement>(null);
-  const animFrameRef = useRef<number>();
+  const animFrameRef = useRef<number | undefined>(undefined);
   const startTimeRef = useRef<number | null>(null);
 
   // Smooth timer animation using requestAnimationFrame

@@ -26,7 +26,7 @@ export default function App() {
     <div className={styles.appWrapper}>
       <header className={styles.header}>
         <div className={styles.logo} onClick={() => setMode(null)} style={{cursor: 'pointer'}}>
-          <span className={styles.logoIcon}>⚡</span> SpeedCoder
+          <span className={styles.logoIcon}>⚡</span> Typit
         </div>
         <nav className={styles.nav}>
           <button 

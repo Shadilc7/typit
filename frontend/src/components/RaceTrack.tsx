@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { CarSvg } from './CarSvg.tsx';
 import styles from './RaceTrack.module.css';
 

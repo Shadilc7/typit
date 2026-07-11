@@ -45,7 +45,7 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/me`, { headers });
     if (!response.ok) throw new Error('Failed to get user profile');
     cachedUser = await response.json();
-    return cachedUser;
+    return cachedUser!;
   },
 
   async updateProfile(username: string): Promise<UserProfile> {
