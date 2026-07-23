@@ -215,3 +215,93 @@
   color: var(--color-text-secondary);
   box-shadow: var(--shadow-sm);
 }
+
+/* --- Custom Snippet Modal --- */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modalContent {
+  background: var(--color-bg-card);
+  border: var(--border-accent);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  max-width: 500px;
+  width: 90%;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.modalContent h3 {
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
+}
+
+.modalContent p {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.customTextarea {
+  width: 100%;
+  padding: var(--space-3);
+  background: var(--color-bg-elevated);
+  border: var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-family: var(--font-code);
+  font-size: var(--text-sm);
+  resize: vertical;
+  outline: none;
+}
+
+.customTextarea:focus {
+  border-color: var(--color-accent-primary);
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.primaryBtn {
+  padding: 0.5rem 1.25rem;
+  background: var(--gradient-primary);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.primaryBtn:hover {
+  opacity: 0.9;
+}
+
+.secondaryBtn {
+  padding: 0.5rem 1.25rem;
+  background: var(--color-bg-elevated);
+  color: var(--color-text-secondary);
+  border: var(--border-subtle);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.secondaryBtn:hover {
+  background: var(--color-surface-hover);
+}

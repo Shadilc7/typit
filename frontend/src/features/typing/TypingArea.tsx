@@ -21,10 +21,33 @@ import styles from './TypingArea.module.css';
  * Composes the code display, hidden input capture, stats panel,
  * and results screen into a complete typing experience.
  */
+export type TargetBotPace = 'off' | 'beginner' | 'intermediate' | 'pro' | 'master';
+
+const BOT_PACES: Record<TargetBotPace, { label: string; wpm: number; color: string; badge: string }> = {
+  off: { label: '🤖 Target Bot: Off', wpm: 0, color: '#94a3b8', badge: '' },
+  beginner: { label: '🟢 Beginner (30 WPM)', wpm: 30, color: '#34d399', badge: 'Beginner Bot' },
+  intermediate: { label: '🔵 Intermediate (50 WPM)', wpm: 50, color: '#38bdf8', badge: 'Intermediate Bot' },
+  pro: { label: '🟣 Pro Racer (70 WPM)', wpm: 70, color: '#a855f7', badge: 'Pro Bot' },
+  master: { label: '🔥 Master Typist (100 WPM)', wpm: 100, color: '#f43f5e', badge: 'Master Bot' }
+};
+
 export function TypingArea() {
   const [snippet, setSnippet] = useState<Snippet | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('');
   const [loading, setLoading] = useState(true);
+
+  // Target Bot Pace state (default Off)
+  const [targetBotPace, setTargetBotPace] = useState<TargetBotPace>(() => {
+    if (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') {
+      const saved = localStorage.getItem('typit_target_bot') as TargetBotPace;
+      if (saved && BOT_PACES[saved]) return saved;
+    }
+    return 'off';
+  });
+
+  // Custom snippet modal state
+  const [showCustomModal, setShowCustomModal] = useState(false);
+  const [customText, setCustomText] = useState('');
 
   const engine = useTypingEngine(snippet?.body || '');
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -45,6 +68,28 @@ export function TypingArea() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleStartCustomSnippet = () => {
+    if (!customText.trim()) return;
+    const customSnippet: Snippet = {
+      title: 'Custom Snippet',
+      language: 'custom',
+      difficulty: 1,
+      body: customText.trim(),
+      char_count: customText.trim().length
+    };
+    setSnippet(customSnippet);
+    engine.reset(customSnippet.body);
+    setShowCustomModal(false);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const handleTargetBotChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const pace = e.target.value as TargetBotPace;
+    setTargetBotPace(pace);
+    localStorage.setItem('typit_target_bot', pace);
+    setTimeout(() => inputRef.current?.focus(), 50);
   };
 
   // Save result when finished
@@ -82,10 +127,12 @@ export function TypingArea() {
     engine.handleKeyDown(e);
   }, [engine]);
 
-  // Prevent paste
+  // Prevent paste unless custom modal is open
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
-    e.preventDefault();
-  }, []);
+    if (!showCustomModal) {
+      e.preventDefault();
+    }
+  }, [showCustomModal]);
 
   // Play again handler
   const handlePlayAgain = useCallback(() => {
@@ -110,16 +157,36 @@ export function TypingArea() {
     return <div className={styles.container}><div style={{textAlign: 'center', padding: '2rem'}}>Loading snippet...</div></div>;
   }
 
-  const trackPlayer: TrackPlayer = {
-    id: 'solo-player',
-    username: 'Guest',
-    isCurrentUser: true,
-    currentPosition: engine.currentIndex,
-    totalLength: snippet.body.length,
-    wpm: engine.stats.wpm,
-    finishedAt: engine.isFinished ? new Date().toISOString() : null,
-    color: '#38bdf8' // Cyberpunk sky blue color
-  };
+  const trackPlayers: TrackPlayer[] = [
+    {
+      id: 'solo-player',
+      username: 'You',
+      isCurrentUser: true,
+      currentPosition: engine.currentIndex,
+      totalLength: snippet.body.length,
+      wpm: engine.stats.wpm,
+      finishedAt: engine.isFinished ? new Date().toISOString() : null,
+      color: '#38bdf8' // Sky blue color
+    }
+  ];
+
+  if (targetBotPace !== 'off' && BOT_PACES[targetBotPace]) {
+    const botConfig = BOT_PACES[targetBotPace];
+    const ghostCharsTyped = engine.isStarted 
+      ? Math.min(snippet.body.length, Math.floor((engine.stats.elapsedSeconds / 60) * (botConfig.wpm * 5)))
+      : 0;
+
+    trackPlayers.push({
+      id: 'bot-player',
+      username: `${botConfig.badge} (${botConfig.wpm} WPM)`,
+      isCurrentUser: false,
+      currentPosition: ghostCharsTyped,
+      totalLength: snippet.body.length,
+      wpm: botConfig.wpm,
+      finishedAt: ghostCharsTyped >= snippet.body.length ? new Date().toISOString() : null,
+      color: botConfig.color
+    });
+  }
 
   return (
     <div className={styles.container} id="typing-area">
@@ -137,6 +204,28 @@ export function TypingArea() {
         </div>
 
         <div className={styles.controls}>
+          <select
+            className={styles.languageSelect}
+            value={targetBotPace}
+            onChange={handleTargetBotChange}
+            id="target-bot-select"
+            style={{ fontWeight: targetBotPace !== 'off' ? '700' : 'normal' }}
+          >
+            {(Object.keys(BOT_PACES) as TargetBotPace[]).map(key => (
+              <option key={key} value={key}>
+                {BOT_PACES[key].label}
+              </option>
+            ))}
+          </select>
+
+          <button 
+            className={styles.languageSelect} 
+            style={{ cursor: 'pointer', paddingRight: '1rem', backgroundImage: 'none' }}
+            onClick={() => setShowCustomModal(true)}
+          >
+            📝 Custom Text
+          </button>
+
           <select
             className={styles.languageSelect}
             value={selectedLanguage}
@@ -162,8 +251,34 @@ export function TypingArea() {
         </div>
       </div>
 
-      {/* Live Race Track */}
-      <RaceTrack players={[trackPlayer]} />
+      {/* Live Race Track (Target Bot Optional) */}
+      <RaceTrack players={trackPlayers} />
+
+      {/* Custom Snippet Modal */}
+      {showCustomModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <h3>Practice Custom Snippet</h3>
+            <p>Paste or type any code snippet or text you want to practice below:</p>
+            <textarea
+              className={styles.customTextarea}
+              rows={6}
+              value={customText}
+              onChange={e => setCustomText(e.target.value)}
+              placeholder="Paste your custom code here..."
+              autoFocus
+            />
+            <div className={styles.modalActions}>
+              <button className={styles.primaryBtn} onClick={handleStartCustomSnippet}>
+                Start Practice
+              </button>
+              <button className={styles.secondaryBtn} onClick={() => setShowCustomModal(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats panel */}
       <StatsPanel

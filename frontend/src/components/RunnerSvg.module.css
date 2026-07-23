@@ -1,0 +1,99 @@
+.runnerContainer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  user-select: none;
+}
+
+.svgElement {
+  display: block;
+  overflow: visible;
+}
+
+/* --- Speed Dust Trails --- */
+
+.speedTrails line {
+  animation: trailPulse 0.4s ease-in-out infinite alternate;
+}
+
+@keyframes trailPulse {
+  0% { opacity: 0.3; transform: translate3d(-2px, 0, 0); }
+  100% { opacity: 0.9; transform: translate3d(3px, 0, 0); }
+}
+
+/* --- Main Running Animation Cycle --- */
+
+.isRunning .bodyGroup {
+  animation: runnerBounce 0.4s ease-in-out infinite alternate;
+}
+
+.isRunning .frontLeg {
+  transform-origin: 38px 42px;
+  animation: legStrideFront 0.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite alternate;
+}
+
+.isRunning .backLeg {
+  transform-origin: 38px 42px;
+  animation: legStrideBack 0.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite alternate;
+}
+
+.isRunning .frontArm {
+  transform-origin: 42px 26px;
+  animation: armSwingFront 0.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite alternate;
+}
+
+.isRunning .backArm {
+  transform-origin: 42px 26px;
+  animation: armSwingBack 0.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite alternate;
+}
+
+/* --- Keyframe Rotations --- */
+
+@keyframes runnerBounce {
+  0% { transform: translate3d(0, -3px, 0) rotate(1deg); }
+  100% { transform: translate3d(0, 3px, 0) rotate(-2deg); }
+}
+
+@keyframes legStrideFront {
+  0% { transform: rotate(-36deg); }
+  100% { transform: rotate(38deg); }
+}
+
+@keyframes legStrideBack {
+  0% { transform: rotate(38deg); }
+  100% { transform: rotate(-36deg); }
+}
+
+@keyframes armSwingFront {
+  0% { transform: rotate(32deg); }
+  100% { transform: rotate(-34deg); }
+}
+
+@keyframes armSwingBack {
+  0% { transform: rotate(-34deg); }
+  100% { transform: rotate(32deg); }
+}
+
+/* --- Victory Pose when Finished --- */
+
+.isFinished .frontArm {
+  transform-origin: 42px 26px;
+  transform: rotate(-65deg);
+  transition: transform 0.3s ease-out;
+}
+
+.isFinished .backArm {
+  transform-origin: 42px 26px;
+  transform: rotate(-55deg);
+  transition: transform 0.3s ease-out;
+}
+
+.isFinished .bodyGroup {
+  animation: victoryFloat 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes victoryFloat {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(0, -5px, 0); }
+}

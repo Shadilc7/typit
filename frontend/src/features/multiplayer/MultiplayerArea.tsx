@@ -4,10 +4,11 @@ import { getCableConsumer } from '../../services/cable';
 import type { Subscription } from '@rails/actioncable';
 import { CodeDisplay } from '../typing/CodeDisplay';
 import { useTypingEngine } from '../typing/useTypingEngine';
-import styles from '../typing/TypingArea.module.css'; // Reuse styles for now
+import styles from '../typing/TypingArea.module.css';
 import multiplayerStyles from './MultiplayerArea.module.css';
-import { RaceTrack, type TrackPlayer } from '../../components/RaceTrack';
-import { ResultsScreen } from '../typing/ResultsScreen';
+import { RaceTrack } from '../../components/RaceTrack';
+import { MultiplayerScoreboard } from './MultiplayerScoreboard';
+import { sound } from '../../services/sound';
 
 type Player = {
   id: string;
@@ -17,16 +18,47 @@ type Player = {
   current_position: number;
   wpm: number;
   finished_at: string | null;
+  left?: boolean;
 };
 
 type RaceState = {
   room_code: string;
   status: 'waiting' | 'countdown' | 'in_progress' | 'finished';
   snippet: any;
-  host: { id: string, username: string };
+  host: { id: string; username: string };
   players: Player[];
   started_at?: string;
 };
+
+const CAR_COLORS = [
+  '#38bdf8', // Cyan
+  '#fbbf24', // Amber / Gold
+  '#f87171', // Red / Rose
+  '#34d399', // Emerald
+  '#a78bfa', // Purple
+  '#f472b6', // Pink
+  '#fb923c', // Orange
+  '#60a5fa'  // Blue
+];
+
+/**
+ * Standardize participant object structure across REST API and WebSocket events
+ */
+function normalizeParticipant(p: any, hostId?: string): Player {
+  const userId = p.user_id || (p.user && p.user.id);
+  const username = p.username || (p.user && p.user.username) || 'Player';
+  const isHost = p.is_host !== undefined ? p.is_host : (hostId ? userId === hostId : false);
+
+  return {
+    id: p.id || userId,
+    user_id: userId,
+    username,
+    is_host: isHost,
+    current_position: Number(p.current_position) || 0,
+    wpm: Number(p.wpm) || 0,
+    finished_at: p.finished_at || null
+  };
+}
 
 export function MultiplayerArea({ onExit }: { onExit: () => void }) {
   const [view, setView] = useState<'lobby' | 'waiting' | 'race'>('lobby');
@@ -38,33 +70,40 @@ export function MultiplayerArea({ onExit }: { onExit: () => void }) {
   const [username, setUsername] = useState<string>('');
   const [difficulty, setDifficulty] = useState<number>(0);
   const [language, setLanguage] = useState<string>('');
+  const [notification, setNotification] = useState<string | null>(null);
   const subscriptionRef = useRef<Subscription | null>(null);
+
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   // Initialize and get current user info
   useEffect(() => {
     api.getCurrentUser().then(user => {
       setCurrentUserId(user.id);
       setUsername(user.username);
-    }).catch(err => console.error("Failed to fetch user:", err));
+    }).catch(err => console.error("Failed to fetch user profile:", err));
   }, []);
 
   const handleCreateRoom = async () => {
     try {
       setError('');
-      if (!username.trim()) throw new Error("Name cannot be empty");
+      if (!username.trim()) throw new Error("Please enter your name");
       await api.updateProfile(username.trim());
 
       const race = await api.createRace(difficulty || undefined, language || undefined);
+      const hostId = race.host.id;
+      const normalizedPlayers = race.race_participants.map((p: any) => normalizeParticipant(p, hostId));
+
       setRaceState({
         room_code: race.room_code,
         status: race.status,
         snippet: race.snippet,
         host: race.host,
-        players: race.race_participants.map((p: any) => ({
-          ...p,
-          username: p.user.username,
-          user_id: p.user.id
-        }))
+        players: normalizedPlayers
       });
       setView('waiting');
       setupSubscription(race.room_code);
@@ -79,20 +118,19 @@ export function MultiplayerArea({ onExit }: { onExit: () => void }) {
     
     try {
       setError('');
-      if (!username.trim()) throw new Error("Name cannot be empty");
+      if (!username.trim()) throw new Error("Please enter your name");
       await api.updateProfile(username.trim());
 
       const race = await api.joinRace(joinCode.trim());
+      const hostId = race.host.id;
+      const normalizedPlayers = race.race_participants.map((p: any) => normalizeParticipant(p, hostId));
+
       setRaceState({
         room_code: race.room_code,
         status: race.status,
         snippet: race.snippet,
         host: race.host,
-        players: race.race_participants.map((p: any) => ({
-          ...p,
-          username: p.user.username,
-          user_id: p.user.id
-        }))
+        players: normalizedPlayers
       });
       setView('waiting');
       setupSubscription(race.room_code);
@@ -102,38 +140,83 @@ export function MultiplayerArea({ onExit }: { onExit: () => void }) {
   };
 
   const setupSubscription = async (roomCode: string) => {
-    const consumer = await getCableConsumer();
+    const consumer = await getCableConsumer(true);
     
+    if (subscriptionRef.current) {
+      subscriptionRef.current.unsubscribe();
+    }
+
     subscriptionRef.current = consumer.subscriptions.create(
       { channel: 'RaceChannel', room_code: roomCode },
       {
         received(data: any) {
-          console.log("WS Data:", data);
           if (data.action === 'player_joined') {
             setRaceState(prev => {
               if (!prev) return prev;
-              const exists = prev.players.find(p => p.user_id === data.participant.user_id);
-              if (exists) return prev;
-              return { ...prev, players: [...prev.players, data.participant] };
+              const newPlayer = normalizeParticipant(data.participant, prev.host.id);
+              const exists = prev.players.some(p => p.user_id === newPlayer.user_id);
+              if (exists) {
+                return {
+                  ...prev,
+                  players: prev.players.map(p => p.user_id === newPlayer.user_id ? { ...p, ...newPlayer } : p)
+                };
+              }
+              return { ...prev, players: [...prev.players, newPlayer] };
             });
           } else if (data.action === 'player_left') {
             setRaceState(prev => {
               if (!prev) return prev;
-              return { ...prev, players: prev.players.filter(p => p.user_id !== data.user_id) };
+              if (prev.status === 'waiting') {
+                return { ...prev, players: prev.players.filter(p => p.user_id !== data.user_id) };
+              }
+              return {
+                ...prev,
+                players: prev.players.map(p => 
+                  p.user_id === data.user_id ? { ...p, left: true } : p
+                )
+              };
             });
+            if (data.username) {
+              setNotification(`⚠️ ${data.username} left the race`);
+            }
           } else if (data.action === 'race_starting') {
             setRaceState(prev => {
               if (!prev) return prev;
               return { ...prev, status: 'countdown', started_at: data.started_at };
             });
             setView('race');
+          } else if (data.action === 'race_restarted') {
+            setRaceState(prev => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                status: 'countdown',
+                started_at: data.started_at,
+                snippet: data.snippet || prev.snippet,
+                players: prev.players.map(p => ({
+                  ...p,
+                  current_position: 0,
+                  wpm: 0,
+                  finished_at: null,
+                  left: false
+                }))
+              };
+            });
+            setView('race');
+            setNotification('🔄 Rematch starting!');
           } else if (data.action === 'progress_updated') {
             setRaceState(prev => {
               if (!prev) return prev;
               return {
                 ...prev,
                 players: prev.players.map(p => 
-                  p.user_id === data.user_id ? { ...p, current_position: data.current_position } : p
+                  p.user_id === data.user_id 
+                    ? { 
+                        ...p, 
+                        current_position: Number(data.current_position),
+                        wpm: data.wpm !== undefined ? Number(data.wpm) : p.wpm
+                      } 
+                    : p
                 )
               };
             });
@@ -143,7 +226,14 @@ export function MultiplayerArea({ onExit }: { onExit: () => void }) {
               return {
                 ...prev,
                 players: prev.players.map(p => 
-                  p.user_id === data.user_id ? { ...p, wpm: data.wpm, accuracy: data.accuracy, finished_at: new Date().toISOString() } : p
+                  p.user_id === data.user_id 
+                    ? { 
+                        ...p, 
+                        current_position: data.current_position || prev.snippet.char_count,
+                        wpm: Number(data.wpm), 
+                        finished_at: data.finished_at || new Date().toISOString() 
+                      } 
+                    : p
                 )
               };
             });
@@ -157,11 +247,53 @@ export function MultiplayerArea({ onExit }: { onExit: () => void }) {
     subscriptionRef.current?.perform('start_race');
   };
 
+  const handleRematch = () => {
+    subscriptionRef.current?.perform('rematch');
+  };
+
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyInviteLink = () => {
+    if (!raceState) return;
+    const url = `${window.location.origin}${window.location.pathname}?room=${raceState.room_code}`;
+    
+    const showSuccess = () => {
+      setCopied(true);
+      setNotification('📋 Room invite link copied to clipboard!');
+      setTimeout(() => setCopied(false), 2500);
+    };
+
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(url).then(showSuccess).catch(() => fallbackCopy(url, showSuccess));
+    } else {
+      fallbackCopy(url, showSuccess);
+    }
+  };
+
+  const fallbackCopy = (text: string, onSuccess: () => void) => {
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-9999px';
+      textArea.style.top = '-9999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      onSuccess();
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+    }
+  };
+
   // Cleanup subscription on unmount
   useEffect(() => {
     return () => {
       if (subscriptionRef.current) {
         subscriptionRef.current.unsubscribe();
+        subscriptionRef.current = null;
       }
     };
   }, []);
@@ -249,18 +381,37 @@ export function MultiplayerArea({ onExit }: { onExit: () => void }) {
 
     return (
       <div className={multiplayerStyles.waitingContainer}>
+        {notification && (
+          <div className={multiplayerStyles.toastNotification}>
+            {notification}
+          </div>
+        )}
         <div className={multiplayerStyles.roomCodeBox}>
           <h3>Room Code</h3>
           <div className={multiplayerStyles.roomCode}>{raceState.room_code}</div>
-          <p>Share this code with your friends to race!</p>
+          <button 
+            onClick={handleCopyInviteLink} 
+            className={multiplayerStyles.secondaryBtn} 
+            style={{ 
+              marginTop: '0.75rem', 
+              fontSize: 'var(--text-xs)', 
+              padding: '0.5rem 1rem',
+              backgroundColor: copied ? 'rgba(52, 211, 153, 0.2)' : undefined,
+              borderColor: copied ? '#34d399' : undefined,
+              color: copied ? '#34d399' : undefined,
+              transition: 'all 0.2s ease'
+            }}
+          >
+            {copied ? '✓ Copied to Clipboard!' : '📋 Copy Invite Link'}
+          </button>
         </div>
         
         <div className={multiplayerStyles.playerList}>
-          <h3>Players ({raceState.players.length})</h3>
+          <h3>Players Connected ({raceState.players.length})</h3>
           <ul>
             {raceState.players.map(p => (
-              <li key={p.id}>
-                {p.username} {p.user_id === raceState.host.id ? '(Host)' : ''}
+              <li key={p.id || p.user_id}>
+                <span>{p.username}</span> {p.user_id === raceState.host.id ? <strong style={{ color: 'var(--color-accent-primary-light)' }}>(Host)</strong> : ''}
               </li>
             ))}
           </ul>
@@ -284,11 +435,15 @@ export function MultiplayerArea({ onExit }: { onExit: () => void }) {
   }
 
   if (view === 'race' && raceState) {
+    const isHost = currentUserId === raceState.host.id;
     return (
       <LiveRace 
         raceState={raceState} 
         subscription={subscriptionRef.current} 
         currentUserId={currentUserId}
+        notification={notification}
+        isHost={isHost}
+        onRematch={handleRematch}
         onExit={onExit}
       />
     );
@@ -297,17 +452,23 @@ export function MultiplayerArea({ onExit }: { onExit: () => void }) {
   return null;
 }
 
-// Sub-component for the actual live race
+// Sub-component for the live race view
 function LiveRace({ 
   raceState, 
   subscription, 
   currentUserId,
+  notification,
+  isHost,
+  onRematch,
   onExit 
 }: { 
-  raceState: RaceState, 
-  subscription: Subscription | null, 
-  currentUserId: string | null,
-  onExit: () => void 
+  raceState: RaceState; 
+  subscription: Subscription | null; 
+  currentUserId: string | null;
+  notification: string | null;
+  isHost?: boolean;
+  onRematch?: () => void;
+  onExit: () => void; 
 }) {
   const engine = useTypingEngine(raceState.snippet.body);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -316,22 +477,37 @@ function LiveRace({
   const [canType, setCanType] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
-  // Sync countdown with server time
+  // Reset typing engine on rematch or countdown start
+  useEffect(() => {
+    if (raceState.status === 'countdown') {
+      engine.reset(raceState.snippet.body);
+      setCanType(false);
+    }
+  }, [raceState.snippet.body, raceState.status]);
+
+  // Sync countdown with server timestamp
   useEffect(() => {
     if (!raceState.started_at) return;
     
     const targetTime = new Date(raceState.started_at).getTime();
     
     const tick = () => {
-      const now = new Date().getTime();
+      const now = Date.now();
       const diff = targetTime - now;
       
       if (diff <= 0) {
         setCountdown(0);
         setCanType(true);
+        sound.playBeep(true);
         inputRef.current?.focus();
       } else {
-        setCountdown(Math.ceil(diff / 1000));
+        const secs = Math.ceil(diff / 1000);
+        setCountdown(prev => {
+          if (prev !== secs && secs <= 5) {
+            sound.playBeep(false);
+          }
+          return secs;
+        });
         requestAnimationFrame(tick);
       }
     };
@@ -339,18 +515,47 @@ function LiveRace({
     tick();
   }, [raceState.started_at]);
 
-  // Throttle WS updates for progress
-  const lastUpdateRef = useRef(0);
-  useEffect(() => {
-    const now = Date.now();
-    // Only send if typing started and throttle to 200ms
-    if (canType && now - lastUpdateRef.current > 200) {
-      subscription?.perform('update_progress', { current_position: engine.currentIndex });
-      lastUpdateRef.current = now;
-    }
-  }, [engine.currentIndex, canType, subscription]);
+  // Robust throttled + trailing edge progress update to ActionCable
+  const lastUpdateMsRef = useRef<number>(0);
+  const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Finish race
+  useEffect(() => {
+    if (!canType || engine.isFinished) return;
+
+    const sendProgress = () => {
+      subscription?.perform('update_progress', { 
+        current_position: engine.currentIndex,
+        wpm: engine.stats.wpm
+      });
+      lastUpdateMsRef.current = Date.now();
+    };
+
+    const now = Date.now();
+    const timeSinceLast = now - lastUpdateMsRef.current;
+
+    if (pendingTimerRef.current) {
+      clearTimeout(pendingTimerRef.current);
+      pendingTimerRef.current = null;
+    }
+
+    if (timeSinceLast >= 150) {
+      sendProgress();
+    } else {
+      pendingTimerRef.current = setTimeout(() => {
+        sendProgress();
+        pendingTimerRef.current = null;
+      }, 150 - timeSinceLast);
+    }
+
+    return () => {
+      if (pendingTimerRef.current) {
+        clearTimeout(pendingTimerRef.current);
+        pendingTimerRef.current = null;
+      }
+    };
+  }, [engine.currentIndex, engine.stats.wpm, canType, engine.isFinished, subscription]);
+
+  // Handle final completion
   useEffect(() => {
     if (engine.isFinished) {
       subscription?.perform('finish_race', {
@@ -360,7 +565,7 @@ function LiveRace({
         time_taken_seconds: engine.stats.elapsedSeconds
       });
     }
-  }, [engine.isFinished]); // Intentionally omitting other deps to only run once on finish
+  }, [engine.isFinished, subscription, engine.stats]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!canType) {
@@ -373,40 +578,50 @@ function LiveRace({
     engine.handleKeyDown(e);
   };
 
-  const carColors = ['#38bdf8', '#fbbf24', '#f87171', '#34d399', '#a78bfa', '#f472b6'];
-
-  const trackPlayers: TrackPlayer[] = raceState.players.map((p, index) => {
+  // Build tracking player list for RaceTrack and MultiplayerScoreboard components
+  const trackPlayers = raceState.players.map((p, index) => {
     const isMe = p.user_id === currentUserId;
     return {
-      id: p.id,
+      id: p.id || p.user_id,
+      user_id: p.user_id,
       username: p.username,
       isCurrentUser: isMe,
       currentPosition: isMe ? engine.currentIndex : p.current_position,
       totalLength: raceState.snippet.char_count,
       wpm: isMe ? engine.stats.wpm : p.wpm,
+      accuracy: isMe ? engine.stats.accuracy : undefined,
       finishedAt: p.finished_at,
-      color: carColors[index % carColors.length]
+      left: p.left,
+      color: CAR_COLORS[index % CAR_COLORS.length]
     };
   });
 
   return (
     <div className={styles.container}>
+      {notification && (
+        <div className={multiplayerStyles.toastNotification}>
+          {notification}
+        </div>
+      )}
+
       {countdown !== null && countdown > 0 && (
         <div className={multiplayerStyles.countdownOverlay}>
           <h1>{countdown}</h1>
         </div>
       )}
       
-      {/* Live Race Track */}
+      {/* Live Race Track displaying all tracking cars and live leader banner */}
       <RaceTrack players={trackPlayers} />
 
-      {engine.isFinished && (
-        <ResultsScreen
-          stats={engine.stats}
-          snippetLength={raceState.snippet.char_count}
-          language={raceState.snippet.language}
-          onPlayAgain={onExit}
-          actionLabel="Back to Lobby"
+      {/* Final Multiplayer Scoreboard & Podium once player finishes */}
+      {(engine.isFinished || raceState.status === 'finished') && (
+        <MultiplayerScoreboard
+          players={trackPlayers}
+          totalLength={raceState.snippet.char_count}
+          currentUserId={currentUserId}
+          isHost={isHost}
+          onRematch={onRematch}
+          onExit={onExit}
         />
       )}
 

@@ -19,21 +19,26 @@ class RaceChannel < ApplicationCable::Channel
         user_id: current_user.id,
         username: current_user.username,
         is_host: @race.host_id == current_user.id,
-        current_position: participant.current_position,
-        wpm: participant.wpm,
+        current_position: participant.current_position || 0,
+        wpm: participant.wpm || 0,
         finished_at: participant.finished_at
       }
     })
   end
 
   def unsubscribed
-    # Only remove participant if race is still waiting.
-    # If in progress or finished, keep them in the DB.
-    if @race&.status == 'waiting'
-      @race.race_participants.find_by(user: current_user)&.destroy
+    if @race
+      @race.reload rescue nil
+      username = current_user&.username || 'A player'
+
+      if @race&.status == 'waiting'
+        @race.race_participants.find_by(user: current_user)&.destroy
+      end
+
       ActionCable.server.broadcast("race_#{@room_code}", {
         action: 'player_left',
-        user_id: current_user.id
+        user_id: current_user&.id,
+        username: username
       })
     end
   end
@@ -51,27 +56,71 @@ class RaceChannel < ApplicationCable::Channel
       started_at: started_at.iso8601
     })
 
-    # Schedule a background job or just let clients handle the transition to 'in_progress'
-    # For simplicity, we just rely on clients to start at the exact started_at time.
-    # But we can also update the DB status.
+    # Use Rails executor to handle background thread safely
+    race_id = @race.id
     Thread.new do
-      sleep 5
-      @race.update(status: 'in_progress') if @race.reload.status == 'countdown'
+      Rails.application.executor.wrap do
+        sleep 5
+        race = Race.find_by(id: race_id)
+        race&.update(status: 'in_progress') if race&.status == 'countdown'
+      end
+    end
+  end
+
+  def rematch
+    return unless @race.host_id == current_user.id
+
+    new_snippet = Snippet.order("RANDOM()").first || @race.snippet
+    started_at = Time.current + 5.seconds
+
+    @race.update!(
+      snippet: new_snippet,
+      status: 'countdown',
+      started_at: started_at
+    )
+    @race.race_participants.update_all(current_position: 0, wpm: 0, finished_at: nil)
+
+    snippet_json = {
+      title: new_snippet.title,
+      language: new_snippet.language,
+      difficulty: new_snippet.difficulty,
+      char_count: new_snippet.char_count,
+      body: new_snippet.body
+    }
+
+    ActionCable.server.broadcast("race_#{@room_code}", {
+      action: 'race_restarted',
+      started_at: started_at.iso8601,
+      snippet: snippet_json
+    })
+
+    race_id = @race.id
+    Thread.new do
+      Rails.application.executor.wrap do
+        sleep 5
+        race = Race.find_by(id: race_id)
+        race&.update(status: 'in_progress') if race&.status == 'countdown'
+      end
     end
   end
 
   def update_progress(data)
-    return unless @race.status == 'in_progress' || @race.status == 'countdown'
+    @race.reload rescue nil
+    return unless @race && (%w[in_progress countdown].include?(@race.status))
 
     participant = @race.race_participants.find_by(user: current_user)
     return unless participant
 
-    participant.update!(current_position: data['current_position'])
+    new_pos = data['current_position'].to_i
+    wpm = data['wpm'] ? data['wpm'].to_f : participant.wpm
+
+    participant.update!(current_position: new_pos, wpm: wpm)
 
     ActionCable.server.broadcast("race_#{@room_code}", {
       action: 'progress_updated',
       user_id: current_user.id,
-      current_position: data['current_position']
+      current_position: new_pos,
+      wpm: wpm
     })
   end
 
@@ -92,6 +141,7 @@ class RaceChannel < ApplicationCable::Channel
     WpmValidationService.new(temp_result).validate!
 
     participant.update!(
+      current_position: @race.snippet.char_count,
       wpm: temp_result.wpm,
       accuracy: temp_result.accuracy,
       finished_at: Time.current
@@ -100,8 +150,10 @@ class RaceChannel < ApplicationCable::Channel
     ActionCable.server.broadcast("race_#{@room_code}", {
       action: 'player_finished',
       user_id: current_user.id,
+      current_position: @race.snippet.char_count,
       wpm: temp_result.wpm,
-      accuracy: temp_result.accuracy
+      accuracy: temp_result.accuracy,
+      finished_at: Time.current.iso8601
     })
 
     # If all players are finished, mark race as finished
@@ -110,3 +162,4 @@ class RaceChannel < ApplicationCable::Channel
     end
   end
 end
+

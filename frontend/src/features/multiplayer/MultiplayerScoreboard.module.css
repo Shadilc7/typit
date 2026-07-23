@@ -1,0 +1,373 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 14, 23, 0.88);
+  backdrop-filter: blur(10px);
+  z-index: var(--z-modal);
+  animation: fadeIn 0.25s ease-out;
+  padding: 1.5rem;
+}
+
+.container {
+  background: var(--gradient-card);
+  border: var(--border-accent);
+  border-radius: var(--radius-xl);
+  padding: 2rem 2.5rem;
+  max-width: 720px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  box-shadow: var(--shadow-lg), var(--shadow-glow-primary);
+  animation: fadeInScale 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.header {
+  text-align: center;
+}
+
+.title {
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 0.2rem;
+}
+
+/* --- Victory Podium --- */
+
+.podiumContainer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 1rem;
+  width: 100%;
+  padding-top: 1rem;
+}
+
+.podiumStep {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  max-width: 150px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: 0.75rem 0.5rem 0;
+  position: relative;
+}
+
+.stepEmpty {
+  visibility: hidden;
+}
+
+.crown {
+  font-size: 1.5rem;
+  animation: bounce 1.5s ease-in-out infinite;
+  margin-bottom: -0.25rem;
+}
+
+.podiumMedal {
+  font-size: 1.75rem;
+}
+
+.podiumName {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+  margin-top: 0.2rem;
+}
+
+.podiumWpm {
+  font-size: var(--text-xs);
+  font-weight: 800;
+  color: var(--color-text-secondary);
+  font-family: var(--font-code);
+  margin-bottom: 0.5rem;
+}
+
+.podiumBarGold {
+  width: 100%;
+  height: 90px;
+  background: linear-gradient(180deg, rgba(251, 191, 36, 0.3) 0%, rgba(245, 158, 11, 0.1) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  border-bottom: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-xs);
+  font-weight: 900;
+  color: #fbbf24;
+  letter-spacing: 0.1em;
+}
+
+.podiumBarSilver {
+  width: 100%;
+  height: 65px;
+  background: linear-gradient(180deg, rgba(203, 213, 225, 0.25) 0%, rgba(148, 163, 184, 0.08) 100%);
+  border: 1px solid rgba(203, 213, 225, 0.4);
+  border-bottom: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-xs);
+  font-weight: 900;
+  color: #cbd5e1;
+  letter-spacing: 0.1em;
+}
+
+.podiumBarBronze {
+  width: 100%;
+  height: 45px;
+  background: linear-gradient(180deg, rgba(217, 119, 6, 0.25) 0%, rgba(180, 83, 9, 0.08) 100%);
+  border: 1px solid rgba(217, 119, 6, 0.4);
+  border-bottom: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-xs);
+  font-weight: 900;
+  color: #f59e0b;
+  letter-spacing: 0.1em;
+}
+
+/* --- Table Wrapper --- */
+
+.tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: var(--border-subtle);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: var(--text-sm);
+}
+
+.table th {
+  padding: 0.75rem 1rem;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  vertical-align: middle;
+}
+
+.currentUserRow {
+  background: rgba(56, 189, 248, 0.08) !important;
+}
+
+.winnerRow {
+  background: rgba(251, 191, 36, 0.04);
+}
+
+.rankCell {
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.rankNumber {
+  font-size: var(--text-sm);
+}
+
+.playerCell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.colorIndicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.username {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.youBadge {
+  color: var(--color-accent-primary-light);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.progressCell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 130px;
+}
+
+.progressTrack {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progressBar {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.2s ease-out;
+}
+
+.progressPercent {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  font-family: var(--font-code);
+  min-width: 32px;
+}
+
+.wpmCell {
+  white-space: nowrap;
+}
+
+.wpmNum {
+  font-family: var(--font-code);
+  font-size: var(--text-base);
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
+
+.wpmLabel {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-left: 3px;
+}
+
+.statusCell {
+  white-space: nowrap;
+}
+
+.statusFinished {
+  font-size: var(--text-xs);
+  font-weight: 800;
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.15);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.statusLeft {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.12);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.statusTyping {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.12);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  animation: pulseGlow 1.5s ease-in-out infinite;
+}
+
+.personalSummary {
+  display: flex;
+  gap: 1.5rem;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.6rem 1.25rem;
+  border-radius: var(--radius-full);
+  border: var(--border-subtle);
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.primaryBtn {
+  padding: 0.75rem 2.5rem;
+  background: var(--gradient-primary);
+  color: white;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  box-shadow: var(--shadow-glow-primary);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.primaryBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 28px var(--color-accent-primary-glow);
+}
+
+.primaryBtn:active {
+  transform: translateY(0);
+}
+
+.secondaryBtn {
+  padding: 0.75rem 2rem;
+  background: var(--color-bg-elevated);
+  color: var(--color-text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: 700;
+  border: var(--border-subtle);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.secondaryBtn:hover {
+  transform: translateY(-2px);
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.secondaryBtn:active {
+  transform: translateY(0);
+}

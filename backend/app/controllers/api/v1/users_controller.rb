@@ -9,6 +9,15 @@ class Api::V1::UsersController < ApplicationController
     }
   end
   def update
+    if current_user.username == user_params[:username]
+      render json: {
+        id: current_user.id,
+        username: current_user.username,
+        is_guest: current_user.is_guest
+      }
+      return
+    end
+
     if current_user.update(user_params)
       render json: {
         id: current_user.id,

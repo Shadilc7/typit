@@ -1,13 +1,24 @@
 import { useState, useEffect } from 'react';
 import { TypingArea } from './features/typing/TypingArea';
 import { MultiplayerArea } from './features/multiplayer/MultiplayerArea';
+import { sound } from './services/sound';
 import styles from './App.module.css';
 
 export default function App() {
   const [mode, setMode] = useState<'solo' | 'multiplayer' | null>(null);
+  const [isMuted, setIsMuted] = useState(() => sound.getMuted());
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
   });
+
+  // Check URL query parameters for direct room joins
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomParam = urlParams.get('room') || urlParams.get('join');
+    if (roomParam) {
+      setMode('multiplayer');
+    }
+  }, []);
 
   useEffect(() => {
     if (theme === 'light') {
@@ -22,8 +33,12 @@ export default function App() {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
+  const toggleSound = () => {
+    setIsMuted(sound.toggleMute());
+  };
+
   return (
-    <div className={styles.appWrapper}>
+    <div className={styles.app}>
       <header className={styles.header}>
         <div className={styles.logo} onClick={() => setMode(null)} style={{cursor: 'pointer'}}>
           <span className={styles.logoIcon}>⚡</span> Typit
@@ -42,6 +57,14 @@ export default function App() {
             MULTIPLAYER
           </button>
           <button 
+            onClick={toggleSound} 
+            className={styles.themeToggle}
+            title={isMuted ? "Unmute Sound Effects" : "Mute Sound Effects"}
+            style={{ marginRight: '0.25rem' }}
+          >
+            {isMuted ? '🔇' : '🔊'}
+          </button>
+          <button 
             onClick={toggleTheme} 
             className={styles.themeToggle}
             title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
@@ -53,14 +76,14 @@ export default function App() {
 
       <main className={styles.main}>
         {mode === null && (
-          <div style={{ textAlign: 'center', marginTop: '10vh' }}>
-            <h1 style={{ fontSize: '4rem', marginBottom: '1rem', background: 'var(--gradient-primary)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>
+          <div className={styles.heroContainer}>
+            <h1 className={styles.heroTitle}>
               Race the world.
             </h1>
-            <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', marginBottom: '3rem' }}>
+            <p className={styles.heroSubtitle}>
               Test your typing speed with real code snippets.
             </p>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+            <div className={styles.heroActions}>
               <button 
                 onClick={() => setMode('solo')}
                 className={styles.ctaBtnSolo}
@@ -82,7 +105,7 @@ export default function App() {
 
       <footer className={styles.footer}>
         <p>
-          Built for developers who type fast ⚡ {' '}
+          Built for anyone who types fast ⚡
         </p>
       </footer>
     </div>

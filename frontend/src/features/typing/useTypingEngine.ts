@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { sound } from '../../services/sound';
 
 /* ─── Types ─── */
 export interface TypingStats {
@@ -188,8 +189,10 @@ export function useTypingEngine(initialSnippet: string): UseTypingEngineReturn {
 
     if (isCorrect) {
       correctCharsRef.current++;
+      sound.playKeyPress();
     } else {
       errorIndicesRef.current.add(currentIndex);
+      sound.playError();
     }
 
     setCharStatuses(prev => {
@@ -210,6 +213,7 @@ export function useTypingEngine(initialSnippet: string): UseTypingEngineReturn {
     if (newIndex === snippet.length) {
       endTimeRef.current = performance.now();
       setIsFinished(true);
+      sound.playVictory();
     }
 
     updateStats();

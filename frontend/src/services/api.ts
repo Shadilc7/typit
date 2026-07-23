@@ -1,6 +1,6 @@
 const API_BASE_URL = 'http://localhost:3000/api/v1';
 
-// We store the guest token in localStorage
+// We store the guest token in sessionStorage so every tab/window gets its own player identity
 const TOKEN_KEY = 'speedcoder_guest_token';
 
 interface UserProfile {
@@ -15,7 +15,7 @@ export const api = {
   // --- Auth & User ---
   
   async getGuestToken(): Promise<string> {
-    let token = localStorage.getItem(TOKEN_KEY);
+    let token = sessionStorage.getItem(TOKEN_KEY);
     if (token) return token;
 
     const response = await fetch(`${API_BASE_URL}/guests`, {
@@ -26,7 +26,7 @@ export const api = {
     if (!response.ok) throw new Error('Failed to create guest session');
     
     const data = await response.json();
-    localStorage.setItem(TOKEN_KEY, data.guest_token);
+    sessionStorage.setItem(TOKEN_KEY, data.guest_token);
     return data.guest_token;
   },
 
@@ -38,6 +38,7 @@ export const api = {
       'Authorization': `Bearer ${token}`
     };
   },
+
 
   async getCurrentUser(): Promise<UserProfile> {
     if (cachedUser) return cachedUser;
@@ -55,7 +56,11 @@ export const api = {
       headers,
       body: JSON.stringify({ user: { username } })
     });
-    if (!response.ok) throw new Error('Failed to update user profile');
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      const msg = data.errors ? data.errors.join(', ') : 'Failed to update user profile';
+      throw new Error(msg);
+    }
     cachedUser = await response.json();
     return cachedUser!;
   },

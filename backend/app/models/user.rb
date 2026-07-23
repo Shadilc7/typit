@@ -6,7 +6,8 @@ class User < ApplicationRecord
 
   has_many :typing_results, dependent: :destroy
 
-  validates :username, presence: true, uniqueness: true, allow_nil: true
+  validates :username, presence: true
+  validates :username, uniqueness: true, unless: :is_guest?, allow_nil: true
   validates :guest_token, uniqueness: true, allow_nil: true
 
   before_validation :generate_guest_token, if: :is_guest?

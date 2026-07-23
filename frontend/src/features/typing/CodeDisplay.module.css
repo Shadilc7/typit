@@ -16,7 +16,7 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--color-bg-elevated);
   border-bottom: var(--border-subtle);
 }
 
@@ -41,7 +41,7 @@
 
 .codeArea {
   padding: var(--space-6);
-  overflow-x: auto;
+  overflow-x: hidden;
   font-family: var(--font-code);
   font-size: 1.05rem;
   line-height: 1.75;
@@ -74,7 +74,8 @@
 .lineContent {
   flex: 1;
   white-space: pre-wrap;
-  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* --- Character states --- */
