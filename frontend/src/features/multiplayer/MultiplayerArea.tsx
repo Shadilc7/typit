@@ -17,6 +17,7 @@ type Player = {
   is_host: boolean;
   current_position: number;
   wpm: number;
+  accuracy?: number;
   finished_at: string | null;
   left?: boolean;
 };
@@ -214,7 +215,8 @@ export function MultiplayerArea({ onExit }: { onExit: () => void }) {
                     ? { 
                         ...p, 
                         current_position: Number(data.current_position),
-                        wpm: data.wpm !== undefined ? Number(data.wpm) : p.wpm
+                        wpm: data.wpm !== undefined ? Number(data.wpm) : p.wpm,
+                        accuracy: data.accuracy !== undefined ? Number(data.accuracy) : p.accuracy
                       } 
                     : p
                 )
@@ -231,6 +233,7 @@ export function MultiplayerArea({ onExit }: { onExit: () => void }) {
                         ...p, 
                         current_position: data.current_position || prev.snippet.char_count,
                         wpm: Number(data.wpm), 
+                        accuracy: data.accuracy !== undefined ? Number(data.accuracy) : p.accuracy,
                         finished_at: data.finished_at || new Date().toISOString() 
                       } 
                     : p
@@ -525,7 +528,8 @@ function LiveRace({
     const sendProgress = () => {
       subscription?.perform('update_progress', { 
         current_position: engine.currentIndex,
-        wpm: engine.stats.wpm
+        wpm: engine.stats.wpm,
+        accuracy: engine.stats.accuracy
       });
       lastUpdateMsRef.current = Date.now();
     };
@@ -553,7 +557,7 @@ function LiveRace({
         pendingTimerRef.current = null;
       }
     };
-  }, [engine.currentIndex, engine.stats.wpm, canType, engine.isFinished, subscription]);
+  }, [engine.currentIndex, engine.stats.wpm, engine.stats.accuracy, canType, engine.isFinished, subscription]);
 
   // Handle final completion
   useEffect(() => {

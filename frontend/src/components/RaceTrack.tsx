@@ -1,5 +1,6 @@
 import { RunnerSvg } from './RunnerSvg';
 import styles from './RaceTrack.module.css';
+import { sortMultiplayerPlayers } from '../utils/ranking';
 
 export interface TrackPlayer {
   id: string;
@@ -8,6 +9,7 @@ export interface TrackPlayer {
   currentPosition: number;
   totalLength: number;
   wpm: number;
+  accuracy?: number;
   finishedAt: string | null;
   left?: boolean;
   color: string;
@@ -18,17 +20,8 @@ interface RaceTrackProps {
 }
 
 export function RaceTrack({ players }: RaceTrackProps) {
-  // Sort players by position descending to calculate dynamic live ranks
-  const sortedPlayers = [...players].sort((a, b) => {
-    if (a.finishedAt && b.finishedAt) {
-      return new Date(a.finishedAt).getTime() - new Date(b.finishedAt).getTime();
-    }
-    if (a.finishedAt) return -1;
-    if (b.finishedAt) return 1;
-    if (a.left && !b.left) return 1;
-    if (!a.left && b.left) return -1;
-    return b.currentPosition - a.currentPosition;
-  });
+  // Sort players by correct words descending (primary) to calculate dynamic live ranks
+  const sortedPlayers = sortMultiplayerPlayers(players);
 
   const leader = sortedPlayers.find(p => !p.left) || sortedPlayers[0];
 
@@ -128,7 +121,7 @@ export function RaceTrack({ players }: RaceTrackProps) {
                 {player.left ? (
                   <span className={styles.leftBadge}>LEFT RACE</span>
                 ) : player.finishedAt ? (
-                  <span className={styles.finishedBadge}>FINISHED</span>
+                  <span className={styles.finishedBadge}>FINISHED ({Math.round(player.wpm || 0)} WPM)</span>
                 ) : (
                   <span className={styles.wpmValue}>
                     {Math.round(player.wpm || 0)} <span className={styles.wpmUnit}>WPM</span>

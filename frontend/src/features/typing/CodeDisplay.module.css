@@ -141,6 +141,24 @@
   color: var(--color-text-primary);
 }
 
+.cursor.incorrect {
+  color: #ffffff;
+  background: var(--color-error);
+  box-shadow: 0 0 10px var(--color-error);
+  animation: cursorErrorBlink 0.6s ease-in-out infinite;
+}
+
+@keyframes cursorErrorBlink {
+  0%, 100% {
+    background: var(--color-error);
+    box-shadow: 0 0 10px var(--color-error);
+  }
+  50% {
+    background: rgba(239, 68, 68, 0.4);
+    box-shadow: 0 0 4px var(--color-error);
+  }
+}
+
 /* Newline chars */
 .newline {
   opacity: 0.3;

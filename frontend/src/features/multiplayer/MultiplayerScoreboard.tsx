@@ -1,4 +1,5 @@
 import styles from './MultiplayerScoreboard.module.css';
+import { sortMultiplayerPlayers } from '../../utils/ranking';
 
 export interface ScoreboardPlayer {
   id: string;
@@ -31,17 +32,8 @@ export function MultiplayerScoreboard({
   onRematch,
   onExit
 }: MultiplayerScoreboardProps) {
-  // Sort players: finished players first by finishedAt time, then active, then left players
-  const sortedPlayers = [...players].sort((a, b) => {
-    if (a.finishedAt && b.finishedAt) {
-      return new Date(a.finishedAt).getTime() - new Date(b.finishedAt).getTime();
-    }
-    if (a.finishedAt) return -1;
-    if (b.finishedAt) return 1;
-    if (a.left && !b.left) return 1;
-    if (!a.left && b.left) return -1;
-    return b.currentPosition - a.currentPosition;
-  });
+  // Sort players by correct words descending (primary winner metric)
+  const sortedPlayers = sortMultiplayerPlayers(players);
 
   const currentUser = players.find(p => p.user_id === currentUserId);
   const winner = sortedPlayers[0];
@@ -57,7 +49,7 @@ export function MultiplayerScoreboard({
             {winner?.user_id === currentUserId ? '🏆 Victory! You Won The Race!' : '🏁 Race Final Standings'}
           </h2>
           <p className={styles.subtitle}>
-            Multiplayer Coding Speed Race
+            Multiplayer Coding Speed Race • Strict Error Correction Mode
           </p>
         </div>
 
@@ -144,6 +136,7 @@ export function MultiplayerScoreboard({
                         {player.isCurrentUser && <span className={styles.youBadge}> (You)</span>}
                       </span>
                     </td>
+
                     <td className={styles.progressCell}>
                       <div className={styles.progressTrack}>
                         <div
@@ -157,8 +150,7 @@ export function MultiplayerScoreboard({
                       <span className={styles.progressPercent}>{progressPercent}%</span>
                     </td>
                     <td className={styles.wpmCell}>
-                      <span className={styles.wpmNum}>{Math.round(player.wpm)}</span>
-                      <span className={styles.wpmLabel}>WPM</span>
+                      <span className={styles.wpmNum}>{Math.round(player.wpm)}</span> <span className={styles.wpmLabel}>WPM</span>
                     </td>
                     <td className={styles.statusCell}>
                       {player.left ? (

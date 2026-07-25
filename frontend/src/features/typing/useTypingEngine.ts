@@ -153,6 +153,24 @@ export function useTypingEngine(initialSnippet: string): UseTypingEngineReturn {
 
     if (e.key === 'Backspace') {
       totalKeystrokesRef.current++;
+
+      // Case 1: Clear error at current index if currently incorrect
+      if (charStatuses[currentIndex] === 'incorrect') {
+        setCharStatuses(prev => {
+          const next = [...prev];
+          next[currentIndex] = 'untyped';
+          return next;
+        });
+        setTypedChars(prev => {
+          const next = [...prev];
+          next[currentIndex] = null;
+          return next;
+        });
+        updateStats();
+        return;
+      }
+
+      // Case 2: Step back to previous character
       if (currentIndex > 0) {
         const newIndex = currentIndex - 1;
         // If the char we're going back to was correct, decrement correct count
@@ -176,6 +194,15 @@ export function useTypingEngine(initialSnippet: string): UseTypingEngineReturn {
       return;
     }
 
+    // Strict Mode Guard: If current character is incorrect, require Backspace before typing again
+    if (charStatuses[currentIndex] === 'incorrect') {
+      totalKeystrokesRef.current++;
+      errorIndicesRef.current.add(currentIndex);
+      sound.playError();
+      updateStats();
+      return;
+    }
+
     // Handle Tab and Enter keys
     const typedKey = e.key === 'Tab' ? '\t' : e.key === 'Enter' ? '\n' : e.key;
     const expectedChar = snippet[currentIndex];
@@ -190,30 +217,39 @@ export function useTypingEngine(initialSnippet: string): UseTypingEngineReturn {
     if (isCorrect) {
       correctCharsRef.current++;
       sound.playKeyPress();
+      setCharStatuses(prev => {
+        const next = [...prev];
+        next[currentIndex] = 'correct';
+        return next;
+      });
+      setTypedChars(prev => {
+        const next = [...prev];
+        next[currentIndex] = typedKey;
+        return next;
+      });
+
+      const newIndex = currentIndex + 1;
+      setCurrentIndex(newIndex);
+
+      // Check for completion (guaranteed 100% correct in strict mode)
+      if (newIndex === snippet.length) {
+        endTimeRef.current = performance.now();
+        setIsFinished(true);
+        sound.playVictory();
+      }
     } else {
       errorIndicesRef.current.add(currentIndex);
       sound.playError();
-    }
-
-    setCharStatuses(prev => {
-      const next = [...prev];
-      next[currentIndex] = isCorrect ? 'correct' : 'incorrect';
-      return next;
-    });
-    setTypedChars(prev => {
-      const next = [...prev];
-      next[currentIndex] = typedKey;
-      return next;
-    });
-
-    const newIndex = currentIndex + 1;
-    setCurrentIndex(newIndex);
-
-    // Check for completion
-    if (newIndex === snippet.length) {
-      endTimeRef.current = performance.now();
-      setIsFinished(true);
-      sound.playVictory();
+      setCharStatuses(prev => {
+        const next = [...prev];
+        next[currentIndex] = 'incorrect';
+        return next;
+      });
+      setTypedChars(prev => {
+        const next = [...prev];
+        next[currentIndex] = typedKey;
+        return next;
+      });
     }
 
     updateStats();

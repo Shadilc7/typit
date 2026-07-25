@@ -113,14 +113,16 @@ class RaceChannel < ApplicationCable::Channel
 
     new_pos = data['current_position'].to_i
     wpm = data['wpm'] ? data['wpm'].to_f : participant.wpm
+    accuracy = data['accuracy'] ? data['accuracy'].to_f : participant.accuracy
 
-    participant.update!(current_position: new_pos, wpm: wpm)
+    participant.update!(current_position: new_pos, wpm: wpm, accuracy: accuracy)
 
     ActionCable.server.broadcast("race_#{@room_code}", {
       action: 'progress_updated',
       user_id: current_user.id,
       current_position: new_pos,
-      wpm: wpm
+      wpm: wpm,
+      accuracy: accuracy
     })
   end
 

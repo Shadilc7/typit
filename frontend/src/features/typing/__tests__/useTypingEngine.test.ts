@@ -61,14 +61,14 @@ describe('useTypingEngine', () => {
   });
 
   describe('incorrect typing', () => {
-    it('should mark incorrect character and still advance', () => {
+    it('should mark incorrect character and block cursor from advancing', () => {
       const { result } = renderHook(() => useTypingEngine(testSnippet));
 
       act(() => {
         result.current.handleKeyDown(createKeyEvent('x')); // wrong key for 'h'
       });
 
-      expect(result.current.currentIndex).toBe(1);
+      expect(result.current.currentIndex).toBe(0);
       expect(result.current.charStatuses[0]).toBe('incorrect');
       expect(result.current.stats.errorCount).toBe(1);
     });
@@ -190,14 +190,17 @@ describe('useTypingEngine', () => {
       const { result } = renderHook(() => useTypingEngine('ab'));
 
       act(() => {
-        result.current.handleKeyDown(createKeyEvent('x')); // wrong
+        result.current.handleKeyDown(createKeyEvent('x')); // wrong key (keystroke 1)
       });
       act(() => {
-        result.current.handleKeyDown(createKeyEvent('b')); // correct
+        result.current.handleKeyDown(createKeyEvent('Backspace')); // backspace to clear error (keystroke 2)
+      });
+      act(() => {
+        result.current.handleKeyDown(createKeyEvent('a')); // correct key for 'a' (keystroke 3)
       });
 
-      // 1 correct / 2 total = 50%
-      expect(result.current.stats.accuracy).toBe(50);
+      // 1 correct / 3 total keystrokes = 33.3%
+      expect(result.current.stats.accuracy).toBe(33.3);
     });
   });
 
