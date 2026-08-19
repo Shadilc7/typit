@@ -1,4 +1,8 @@
-const API_BASE_URL = 'http://localhost:3000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
+  typeof window !== 'undefined' && window.location.port !== '5173' && window.location.port !== '5174'
+    ? `${window.location.origin}/api/v1`
+    : 'http://localhost:3000/api/v1'
+);
 
 // We store the guest token in sessionStorage so every tab/window gets its own player identity
 const TOKEN_KEY = 'speedcoder_guest_token';
